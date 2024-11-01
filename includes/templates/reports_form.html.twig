@@ -1,0 +1,197 @@
+<script type="text/javascript">
+    jQuery(document).ready(function ($) {
+
+        jQuery('#report_form').on('submit', function (e) {
+
+            let date_from = jQuery('#edit-report-date-from').val();
+            let date_to = jQuery('#edit-report-date-to').val();
+            let period = daysBetween(date_from, date_to);
+
+            let checked = '';
+            $('.wtotem_reports-settings input:checkbox:checked').each(function() {
+                checked = checked + ', ' + $(this).val();
+            });
+
+            AmplitudeAnalytics.createReport('days: ' + period, date_from, date_to, checked, '{{ domain }}');
+
+            let formdata = jQuery(this).serialize();
+
+            jQuery('#report_form').addClass('wtotem_loader_spinner');
+            e.preventDefault();
+
+            jQuery.post(
+                ajaxurl,
+                formdata,
+                function (data) {
+                    jQuery('#wtotem_notifications').html(data.notifications);
+                    jQuery('#report_form').removeClass('wtotem_loader_spinner');
+                    if(data){
+                        if(data.link){
+                            window.open(data.link);
+
+                            jQuery('#reports_m_logs_wrap').html(data.reports_m);
+                            jQuery('#reports_logs_wrap').html(data.reports);
+                            jQuery('.wtotem_reports-list').show();
+                            jQuery('.wtotem_reports-no-data').hide();
+                            jQuery('.wtotem_reports-modal').removeClass('wtotem_reports-modal--active');
+                            jQuery('body').removeClass('lock');
+                            jQuery('#wtotem_reports_form-messages').html('');
+
+                        } else {
+                            jQuery('#wtotem_reports_form-messages').html(data.massage);
+                        }
+
+                    }
+                });
+        });
+
+        jQuery('.wtotem_body').on('click', '.add_report', function (e) {
+            AmplitudeAnalytics.includeReportModule();
+        });
+
+    });
+
+    window.addEventListener('DOMContentLoaded', function () {
+        const settingsCalendarElement = document.querySelector("#edit-report-date-from");
+        const settingsCalendarGroup = document.querySelector(".wtotem_reports-settings__dates");
+        const settingsCalendar = setFlatpickr_(settingsCalendarElement, "#edit-report-date-from", "#edit-report-date-to", settingsCalendarGroup);
+
+        document.querySelector('.wtotem_reports-settings__period-list').addEventListener('change', (evt) => {
+            if (evt.target.tagName !== 'INPUT') {
+                return;
+            }
+
+            const subMonths = (months) => {
+                const result = new Date();
+                let site_created_at = document.getElementById('wtotem_site_created_at');
+                let date_site_created_at = site_created_at.getAttribute('data-value');
+
+                const site_created_at_date = new Date(date_site_created_at);
+
+                if(months == 7){
+                    result.setDate(result.getDate() - months);
+                } else {
+                    result.setMonth(result.getMonth() - months);
+                }
+
+                return (result < site_created_at_date) ? site_created_at_date : result;
+            };
+
+            const formatDate = (date) => {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+
+                return `${year}-${month}-${day}`;
+            }
+
+            const months = parseInt(evt.target.value, 10);
+            const dateTo = formatDate(new Date());
+            const dateFrom = formatDate(subMonths(months));
+
+            settingsCalendar.setDate([dateFrom, dateTo], true);
+        });
+    });
+</script>
+
+<!-- Report settings modal -->
+<div class="wtotem_reports-modal wtotem_reports-modal--hidden">
+    <div class="wtotem_reports-modal__content">
+
+        <button class="wtotem_reports-modal__close" type="button">
+            <span class="visually-hidden"> {{ 'Close'|trans }}</span>
+        </button>
+
+        <h2 class="h2 visually-hidden"> {{ 'Report settings'|trans }}</h2>
+
+        <form action="" class="wtotem_reports-settings" id="report_form">
+            <input type="hidden" name="action" value="wtotem_ajax">
+            <input type="hidden" name="ajax_action" value="reports">
+            <input type="hidden" name="report_action" value="report_form">
+            <input type="hidden" name="wtotem_page_nonce" value="{{ page_nonce }}">
+
+            <p class="wtotem_reports-settings__field-title"> {{ 'Select report period'|trans }}</p>
+            <ul class="wtotem_reports-settings__period-list">
+                <li class="wtotem_reports-settings__period-item">
+                    <input class="wtotem_reports-settings__period-radio" type="radio" id="week" name="period"
+                           value="7" >
+                    <label class="wtotem_reports-settings__period-label" for="week">
+                        {{ 'Week'|trans }}
+                    </label>
+                </li>
+                <li class="wtotem_reports-settings__period-item">
+                    <input class="wtotem_reports-settings__period-radio" type="radio" id="month" name="period"
+                           value="1" >
+                    <label class="wtotem_reports-settings__period-label" for="month">
+                        {{ 'Month'|trans }}
+                    </label>
+                </li>
+                <li class="wtotem_reports-settings__period-item">
+                    <input class="wtotem_reports-settings__period-radio" type="radio" id="year" name="period"
+                           value="12">
+                    <label class="wtotem_reports-settings__period-label" for="year">
+                        {{ 'Year'|trans }}
+                    </label>
+                </li>
+            </ul>
+
+            <div class="wtotem_reports-settings__dates">
+                <input class="wtotem_calendar flatpickr flatpickr-input wtotem_calendar_report_from" type="text"
+                       name="date_from" readonly="readonly" id="edit-report-date-from" placeholder="{{ 'Select Date' | trans }}" />
+                <div class="wtotem_calendar-connect">
+                    -
+                </div>
+                <input class="wtotem_calendar wtotem_calendar_report_to" name="date_to" type="text" id="edit-report-date-to" readonly="readonly" placeholder="{{ 'Select Date' | trans }}" />
+            </div>
+
+            <p class="wtotem_reports-settings__field-title--modules"> {{ 'Choose modules'|trans }}</p>
+            <ul class="wtotem_reports-settings__modules-list">
+                <li class="wtotem_reports-settings__module-item">
+                    <p class="wtotem_reports-settings__module-title"> {{ 'Availability'|trans }}</p>
+                    <input class="wtotem_reports-settings__module-checkbox" type="checkbox"
+                           id="module-avaliability" name="modules[wa]" value="wa" checked>
+                    <label class="wtotem_reports-settings__module-label" for="module-avaliability"></label>
+                </li>
+{#                <li class="wtotem_reports-settings__module-item">#}
+{#                    <p class="wtotem_reports-settings__module-title"> {{ 'Deface'|trans }}</p>#}
+{#                    <input class="wtotem_reports-settings__module-checkbox" type="checkbox"#}
+{#                           id="module-deface" name="modules[dc]" value="dc" checked>#}
+{#                    <label class="wtotem_reports-settings__module-label" for="module-deface"></label>#}
+{#                </li>#}
+                <li class="wtotem_reports-settings__module-item">
+                    <p class="wtotem_reports-settings__module-title"> {{ 'Ports'|trans }}</p>
+                    <input class="wtotem_reports-settings__module-checkbox" type="checkbox"
+                           id="module-ports" name="modules[ps]" value="ps" checked>
+                    <label class="wtotem_reports-settings__module-label" for="module-ports"></label>
+                </li>
+                <li class="wtotem_reports-settings__module-item">
+                    <p class="wtotem_reports-settings__module-title"> {{ 'Reputation'|trans }}</p>
+                    <input class="wtotem_reports-settings__module-checkbox" type="checkbox"
+                           id="module-reputation" name="modules[rc]" value="rc" checked>
+                    <label class="wtotem_reports-settings__module-label" for="module-reputation"></label>
+                </li>
+                <li class="wtotem_reports-settings__module-item">
+                    <p class="wtotem_reports-settings__module-title"> {{ 'Scoring'|trans }}</p>
+                    <input class="wtotem_reports-settings__module-checkbox" type="checkbox"
+                           id="module-scoring" name="modules[sc]" value="sc" checked>
+                    <label class="wtotem_reports-settings__module-label" for="module-scoring"></label>
+                </li>
+                <li class="wtotem_reports-settings__module-item">
+                    <p class="wtotem_reports-settings__module-title"> {{ 'Antivirus'|trans }}</p>
+                    <input class="wtotem_reports-settings__module-checkbox" type="checkbox"
+                           id="module-antivirus" name="modules[av]" value="av" checked>
+                    <label class="wtotem_reports-settings__module-label" for="module-antivirus"></label>
+                </li>
+                <li class="wtotem_reports-settings__module-item">
+                    <p class="wtotem_reports-settings__module-title"> {{ 'Firewall'|trans }}</p>
+                    <input class="wtotem_reports-settings__module-checkbox" type="checkbox"
+                           id="module-firewall" name="modules[waf]" value="waf" checked>
+                    <label class="wtotem_reports-settings__module-label" for="module-firewall"></label>
+                </li>
+            </ul>
+
+            <input type="submit" value="{{ 'Generate new report'|trans }}" class="wtotem_reports__btn wtotem_reports-settings__btn button">
+            <div id="wtotem_reports_form-messages"></div>
+        </form>
+    </div>
+</div>

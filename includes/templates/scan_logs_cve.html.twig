@@ -1,0 +1,47 @@
+{% if logs %}
+
+        {% for log in logs %}
+            <div class="cve__item">
+                <p class="cve__plugin">
+                    <span class="cve__plugin_name">{{log.plugin_name}}</span><br>
+                    <span class="cve__plugin_version {% if log.new_version %}outdated{% endif %}">
+                        {{ 'Version'|trans }} {{log.plugin_version}}{% if log.new_version %} - {{ 'Outdated'|trans }}{% endif %}
+                    </span>
+                </p>
+
+                <a href="{{log.cve_data.reference}}" target="_blank" class="cve__name">
+                    {{log.cve_data.id}}
+                </a>
+
+                <p class="cve__description">{{ log.cve_data.summary|slice(0, 45) }}{% if log.cve_data.summary|length > 45 %}...{% endif %}<br>
+                    {% if log.cve_data.summary|length > 45 %}
+                        <a class="cve__more_btn" href="#"
+                            data-id="{{ log.cve_data.id }}"
+                            data-published="{{ log.cve_data.published }}"
+                            data-summary="{{ log.cve_data.summary }}">{{ 'Learn more'|trans }} </a>
+                    {% endif %}
+                </p>
+
+                <p class="cve__date">{{log.cve_data.published}}</p>
+
+                <p class="cve__action">
+                    {% if log.new_version %}
+                        <a href="/wp-admin/plugins.php" class="update_plugin open-popup" data-action="update_plugin" data-slug="{{log.slug}}">{{ 'Update'|trans }}</a>
+                    {% endif %}
+                </p>
+
+            </div>
+        {% endfor %}
+
+{% else %}
+<!-- No data block -->
+<section class="wtotem_reports-no-data" style="height:300px" >
+    <h2 class="h2 visually-hidden">{{ 'Clean'|trans }}</h2>
+    <p class="wtotem_reports-no-data__text">
+        {{ 'We did not find any vulnerabilities'|trans }}
+    </p>
+</section>
+{% endif %}
+
+
+
